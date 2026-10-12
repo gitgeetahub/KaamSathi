@@ -19,9 +19,11 @@ dotenv.config();
 
 
 const app = express();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const frontendDist = path.resolve(__dirname, "../frontend/dist");
+
 const PORT = process.env.PORT || 5000;
 
 
@@ -2152,10 +2154,13 @@ app.get("/api/wages", async (req, res) => {
 
 
 
-app.use(express.static(frontendDist));
+// In production, serve the built React frontend. During local development,
+// Vite serves the frontend at http://localhost:5173 instead.
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(frontendDist));
+}
 
 // 404 Route Handler for undefined API endpoints
-
 app.use("/api", (req, res) => {
 
   res.status(404).json({
@@ -2170,19 +2175,21 @@ app.use("/api", (req, res) => {
 
 
 
-// Send the React app for browser routes, but leave API requests as JSON.
-app.use((req, res, next) => {
-  if (req.method !== "GET" || req.path.startsWith("/api")) {
-    return next();
-  }
+// In production, send browser routes to the React app.
+// In local development, Vite handles frontend routes on port 5173.
+if (process.env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api")) {
+      return next();
+    }
 
-  res.sendFile(path.join(frontendDist, "index.html"), (err) => {
-    if (err) next(err);
+    res.sendFile(path.join(frontendDist, "index.html"), (err) => {
+      if (err) next(err);
+    });
   });
-});
+}
 
 // Global Error Handler
-
 app.use((err, req, res, next) => {
 
   if (err instanceof SyntaxError && "body" in err) {

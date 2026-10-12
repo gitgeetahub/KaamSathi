@@ -1,0 +1,12 @@
+
+{
+  "name": "kaamsathi",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run start --prefix backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
