@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function WorkerBackdrop() {
   return (
     <div className="worker-scene-backdrop" aria-hidden="true">

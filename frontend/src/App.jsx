@@ -311,7 +311,7 @@ function App() {
 
   // Auth State
   const [authProfile, setAuthProfile] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
+  const [authReady, setAuthReady] = useState(() => !localStorage.getItem("kaamsathi_token"));
   const [loginMode, setLoginMode] = useState("admin");
   const [loginPhone, setLoginPhone] = useState("");
   const [loginPin, setLoginPin] = useState("");
@@ -353,10 +353,7 @@ function App() {
   // Check saved session on startup
   useEffect(() => {
     const token = localStorage.getItem("kaamsathi_token");
-    if (!token) {
-      setAuthReady(true);
-      return;
-    }
+    if (!token) return;
     api.get("/auth/me")
       .then((response) => {
         const profile = response.data?.profile || null;
@@ -377,6 +374,8 @@ function App() {
     event.preventDefault();
     setLoginError("");
     setLoginBusy(true);
+    setMyDashboardLoading(loginMode !== "admin");
+    setMyDashboardError("");
     try {
       const payload =
         loginMode === "admin"
@@ -411,8 +410,6 @@ function App() {
   useEffect(() => {
     if (!authProfile || !["worker", "gutha_leader"].includes(authProfile.role)) return;
     let cancelled = false;
-    setMyDashboardLoading(true);
-    setMyDashboardError("");
     api.get("/me/dashboard")
       .then((response) => {
         if (!cancelled) setMyDashboard(response.data);
@@ -489,10 +486,17 @@ function App() {
 
   useEffect(() => {
     if (authProfile?.role !== "admin") return;
-    loadWorkers();
-    loadTeams();
-    loadTransactions();
-    loadWageBalances();
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      loadWorkers();
+      loadTeams();
+      loadTransactions();
+      loadWageBalances();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [authProfile]);
 
   const present = workers.filter((w) => w.status === "Present").length;
@@ -524,7 +528,7 @@ function App() {
       await api.put(`/attendance/${id}`, { status: newStatus });
       await Promise.all([loadWorkers(), loadWageBalances()]);
     } catch (error) {
-      alert("Attendance could not be saved.");
+      alert(error.response?.data?.message || "Attendance could not be saved.");
     }
   }
 
@@ -536,7 +540,7 @@ function App() {
       await loadTeams();
       setNewTeam("");
     } catch (error) {
-      alert("Could not save team.");
+      alert(error.response?.data?.message || "Could not save team.");
     }
   }
 
@@ -546,7 +550,7 @@ function App() {
       await api.delete(`/workers/${worker.id}`);
       await Promise.all([loadWorkers(), loadTeams(), loadTransactions(), loadWageBalances()]);
     } catch (error) {
-      alert("Worker could not be deleted.");
+      alert(error.response?.data?.message || "Worker could not be deleted.");
     }
   }
 
@@ -563,7 +567,7 @@ function App() {
       setShowTransactionForm(false);
       setTransactionAmount("");
     } catch (error) {
-      alert("Could not save transaction.");
+      alert(error.response?.data?.message || "Could not save transaction.");
     }
   }
 
@@ -599,7 +603,7 @@ function App() {
       link.click();
       link.remove();
     } catch (err) {
-      alert("Could not download report.");
+      alert(err.response?.data?.message || "Could not download report.");
     } finally {
       setReportLoading(false);
     }
